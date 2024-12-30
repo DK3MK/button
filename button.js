@@ -1,5 +1,6 @@
 // Created By: Muhammad Adriansyah ( Seaavey )
 // Created At: 30 Desember 2024
+// Updated At: 30 Desember 2024
 // License: MIT
 
 // Note:
@@ -22,6 +23,7 @@ class Button {
     this.header = ''; // Untuk teks header di pesan
     this.content = ''; // Untuk isi utama pesan
     this.button = []; // Array untuk menyimpan data tombol
+    this.rows = [];
   }
 
   /**
@@ -121,7 +123,48 @@ class Button {
             id: data.id, // ID lokasi
           }),
         })
+      : type === 'list'
+      ? this.button.push({
+          name: 'single_select',
+          buttonParamsJson: JSON.stringify({
+            title: data.title,
+            sections: [
+              {
+                title: data.title,
+                highlight_label: data.highlight_label || null,
+                rows: this.rows,
+              },
+            ],
+          }),
+        })
       : null; // Jika tipe tidak sesuai, tidak menambahkan apa-apa
+  }
+
+  /**
+   * Menambahkan baris ke tombol interaktif
+   * @param {Array} data - Data baris yang ingin ditambahkan
+   * @returns {void}
+   * @example
+   * addRows([{
+   *     header: 'header',
+   *     title: 'title',
+   *     description: 'description',
+   *     id: null,
+   * }]) // Menambahkan baris ke tombol interaktif
+   **/
+  addRows(data) {
+    if (this.button.length === 0) return; // Jika tombol belum ditambahkan, hentikan proses
+    if (!Array.isArray(data)) return; // Jika data bukan array, hentikan proses
+    for (let i = 0; i < data.length; i++) {
+      // Looping data dan tambahkan ke array this.rows
+      this.rows.push({
+        // Tambahkan data ke array this.rows
+        header: data[i].header, // Header baris
+        title: data[i].title, // Judul baris
+        description: data[i].description, // Deskripsi baris
+        id: data[i].id, // ID baris
+      });
+    }
   }
 
   /**
