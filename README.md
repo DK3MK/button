@@ -6,7 +6,7 @@ Hello everyone!!!, I will share all the documentation from my baileys on npm [@s
 "@seaavey/baileys": "6.6.5"
 ```
 
-## Function sendIAMessage, هذا تحطة في ملف simple.js
+## Function sendDKButton, هذا تحطة في ملف simple.js
 
 ```
 sendDKButton: {
