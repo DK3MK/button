@@ -6,7 +6,7 @@ Hello everyone!!!, I will share all the documentation from my baileys on npm [@s
 ## Function sendIAMessage
 
 ```
-const sendIAMessage = {
+sendIAMessage: {
     async value(jid, message, quoted, buffer) {
         let img, video, headerup;
 
