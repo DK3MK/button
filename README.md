@@ -93,7 +93,7 @@ sendIAMessage: {
 
         return conn.relayMessage(jid, msg.message, { messageId: msg.key.id });
     },
-};
+},
 
 ``` 
 ## Example Code Button OLD
