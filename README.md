@@ -6,59 +6,94 @@ Hello everyone!!!, I will share all the documentation from my baileys on npm [@s
 ## Function sendIAMessage
 
 ```
-const sendIAMessage = async (jid, btns = [], quoted, opts = {}) => {
-  let messageContent = {
-    viewOnceMessage: {
-      message: {
-        interactiveMessage: proto.Message.InteractiveMessage.create({
-          body: proto.Message.InteractiveMessage.Body.create({
-            text: opts.content, // Isi utama pesan
-          }),
-          footer: proto.Message.InteractiveMessage.Footer.create({
-            text: opts.footer, // Footer pesan
-          }),
-          header: proto.Message.InteractiveMessage.Header.create({
-            title: opts.header, // Header pesan
-            subtitle: '',
-            hasMediaAttachment: !!opts.media, // Apakah ada media?
-          }),
-          contextInfo: {
-            forwardingScore: 9999, // Nilai forward (opsional)
-            isForwarded: false,
-            mentionedJid: conn.parseMention(opts.header + opts.content + opts.footer),
-          },
-          externalAdReply: {
-            showAdAttribution: true,
-            renderLargerThumbnail: false,
-            mediaType: 1, // Media tipe (default: gambar)
-          },
-          nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-            buttons: btns, // Tombol interaktif
-          }),
-        }),
-      },
+const sendIAMessage = {
+    async value(jid, message, quoted, buffer) {
+        let img, video, headerup;
+
+        buffer = message.image ? message.image : message.video;
+        if (/^https?:\/\//i.test(buffer)) {
+            try {
+                const response = await fetch(buffer);
+                const contentType = response.headers.get('content-type');
+                if (/^image\//i.test(contentType)) {
+                    img = await prepareWAMessageMedia({ image: { url: buffer } }, { upload: conn.waUploadToServer });
+                } else if (/^video\//i.test(contentType)) {
+                    video = await prepareWAMessageMedia({ video: { url: buffer } }, { upload: conn.waUploadToServer });
+                } else {
+                    console.error("Tipo MIME no compatible:", contentType);
+                }
+            } catch (error) {
+                console.error("Error al obtener el tipo MIME:", error);
+            }
+        } else {
+            try {
+                const type = await conn.getFile(buffer);
+                if (/^image\//i.test(type.mime)) {
+                    img = await prepareWAMessageMedia({ image: { url: buffer } }, { upload: conn.waUploadToServer });
+                } else if (/^video\//i.test(type.mime)) {
+                    video = await prepareWAMessageMedia({ video: { url: buffer } }, { upload: conn.waUploadToServer });
+                }
+            } catch (error) {
+                console.error("Error al obtener el tipo de archivo:", error);
+            }
+        }
+
+        if (!img && !video) {
+            headerup = {
+                hasMediaAttachment: false,
+                title: message.title ? message.title : null,
+            };
+        } else {
+            headerup = {
+                hasMediaAttachment: true,
+                imageMessage: img ? img.imageMessage : null,
+                videoMessage: video ? video.videoMessage : null,
+                title: message.title ? message.title : null,
+            };
+        }
+
+        const msg = generateWAMessageFromContent(jid, {
+            viewOnceMessage: {
+                message: {
+                    "messageContextInfo": {
+                        "deviceListMetadata": {},
+                        "deviceListMetadataVersion": 2,
+                    },
+                    interactiveMessage: proto.Message.InteractiveMessage.create({
+                        body: proto.Message.InteractiveMessage.Body.create({
+                            text: message.text, 
+                        }),
+                        header: proto.Message.InteractiveMessage.Header.create(headerup),
+                        footer: proto.Message.InteractiveMessage.Footer.create({
+                            text: message.footer, 
+                        }),
+                        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                            buttons: message.buttons.map((button) => ({
+                                ...button,
+                                buttonParamsJson: JSON.stringify(button.buttonParamsJson),
+                            })),
+                        }),
+                        ...Object.assign({
+                            mentions: await conn.parseMention(message.title || null),
+                            contextInfo: {
+                                mentionedJid: await conn.parseMention(message.title || null),
+                                isForwarded: true,
+                                forwardingScore: 9999, 
+                                forwardedNewsletterMessageInfo: {
+                                    newsletterJid: '120363228124354889@newsletter',
+                                    newsletterName: 'Aboud Coding',
+                                },
+                            },
+                        }),
+                    }),
+                },
+            },
+        }, { ephemeralExpiration: 604800, userJid: conn.user.jid, quoted });
+
+
+        return conn.relayMessage(jid, msg.message, { messageId: msg.key.id });
     },
-  };
-
-  // Tambahkan media jika diperlukan
-  if (opts.media) {
-    const media = await prepareWAMessageMedia(
-      {
-        [opts.mediaType || 'image']: { url: opts.media },
-      },
-      { upload: conn.waUploadToServer }
-    );
-    messageContent.viewOnceMessage.message.interactiveMessage.header.hasMediaAttachment = true;
-    Object.assign(messageContent.viewOnceMessage.message.interactiveMessage.header, media);
-  }
-
-  // Buat pesan dan kirimkan
-  let msg = await generateWAMessageFromContent(jid, messageContent, { quoted });
-  await conn.relayMessage(msg.key.remoteJid, msg.message, {
-    messageId: msg.key.id,
-  });
 };
-
 
 ``` 
 ## Example Code Button OLD
