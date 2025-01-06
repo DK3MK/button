@@ -6,11 +6,11 @@ Hello everyone!!!, I will share all the documentation from my baileys on npm [@s
 ## Function sendIAMessage
 
 ```
-sendIAMessage: {
+sendDKButton: {
     async value(jid, message, quoted, buffer) {
         let img, video, headerup;
-
         buffer = message.image ? message.image : message.video;
+
         if (/^https?:\/\//i.test(buffer)) {
             try {
                 const response = await fetch(buffer);
@@ -41,60 +41,68 @@ sendIAMessage: {
         if (!img && !video) {
             headerup = {
                 hasMediaAttachment: false,
-                title: message.title ? message.title : null,
+                title: message.title ? message.title : null
             };
         } else {
             headerup = {
                 hasMediaAttachment: true,
                 imageMessage: img ? img.imageMessage : null,
                 videoMessage: video ? video.videoMessage : null,
-                title: message.title ? message.title : null,
+                title: message.title ? message.title : null
             };
         }
+
+        const filteredButtons = message.buttons.filter(btn => {
+            if (typeof btn.buttonParamsJson === 'string' && btn.buttonParamsJson) {
+                try {
+                    btn.buttonParamsJson = JSON.parse(btn.buttonParamsJson);
+                } catch (e) {}
+            }
+            return btn.name !== 'send_location';
+        }).map(btn => ({
+            ...btn,
+            buttonParamsJson: typeof btn.buttonParamsJson === 'object' 
+                ? JSON.stringify(btn.buttonParamsJson)
+                : btn.buttonParamsJson || ''
+        }));
 
         const msg = generateWAMessageFromContent(jid, {
             viewOnceMessage: {
                 message: {
-                    "messageContextInfo": {
-                        "deviceListMetadata": {},
-                        "deviceListMetadataVersion": 2,
+                    messageContextInfo: {
+                        deviceListMetadata: {},
+                        deviceListMetadataVersion: 2
                     },
                     interactiveMessage: proto.Message.InteractiveMessage.create({
                         body: proto.Message.InteractiveMessage.Body.create({
-                            text: message.text, 
+                            text: message.text,
                         }),
                         header: proto.Message.InteractiveMessage.Header.create(headerup),
                         footer: proto.Message.InteractiveMessage.Footer.create({
-                            text: message.footer, 
+                            text: message.footer
                         }),
                         nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                            buttons: message.buttons.map((button) => ({
-                                ...button,
-                                buttonParamsJson: JSON.stringify(button.buttonParamsJson),
-                            })),
+                            buttons: filteredButtons
                         }),
                         ...Object.assign({
                             mentions: await conn.parseMention(message.title || null),
                             contextInfo: {
                                 mentionedJid: await conn.parseMention(message.title || null),
                                 isForwarded: true,
-                                forwardingScore: 9999, 
                                 forwardedNewsletterMessageInfo: {
                                     newsletterJid: '120363228124354889@newsletter',
-                                    newsletterName: 'Aboud Coding',
-                                },
-                            },
+                                    newsletterName: 'Aboud Coding'
+                                }
+                            }
                         }),
-                    }),
-                },
-            },
+                    })
+                }
+            }
         }, { ephemeralExpiration: 604800, userJid: conn.user.jid, quoted });
 
-
         return conn.relayMessage(jid, msg.message, { messageId: msg.key.id });
-    },
+    }
 },
-
 ``` 
 ## Example Code Button OLD
 
@@ -123,104 +131,129 @@ sock.sendMessage(
 ```
 ## Example All Code Button
 
-### Button Data
-
-```
-const btns = [
-  {
-    name: 'single_select',
-    buttonParamsJson: JSON.stringify({
-      title: 'title',
-      sections: [
-        {
-          title: 'title',
-          highlight_label: 'label',
-          rows: [
-            {
-              header: 'header',
-              title: 'title',
-              description: 'description',
-              id: null,
-            },
-            {
-              header: 'header',
-              title: 'zzzz',
-              description: 'description',
-              id: null,
-            },
-          ],
-        },
-      ],
-    }),
-  },
-  {
-    name: 'quick_reply',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'quick reply',
-      id: null,
-    }),
-  },
-  {
-    name: 'cta_url',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'url',
-      url: 'google.com',
-      merchant_url: 'https://www.google.com',
-    }),
-  },
-  {
-    name: 'cta_call',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'call',
-      id: '628999',
-    }),
-  },
-  {
-    name: 'cta_copy',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'copy',
-      id: '123456789',
-      copy_code: 'message',
-    }),
-  },
-  {
-    name: 'cta_reminder',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'reminder',
-      id: 'message',
-    }),
-  },
-  {
-    name: 'cta_cancel_reminder',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'cancel reminder',
-      id: 'message',
-    }),
-  },
-  {
-    name: 'address_message',
-    buttonParamsJson: JSON.stringify({
-      display_text: 'address message',
-      id: 'indonesia',
-    }),
-  },
-  {
-    name: 'send_location',
-    buttonParamsJson: '',
-  },
-];
-```
-
 ## SendButton
 
 ```
-conn.sendIAMessage(jid, btns, quoted, {
-  header: '',
-  content: 'content',
-  footer: 'footer',
-  /* image: q.thumb2,
-    mediaType: "image" */
-});
+let handler = async (m, { conn }) => {
+  // تعريف كل أنواع الأزرار المدعومة
+  const buttons = [
+    // 1. زر القائمة (single select)
+    {
+      name: 'single_select',
+      buttonParamsJson: {
+        title: 'اختر من القائمة',
+        sections: [
+          {
+            title: 'القسم الأول',
+            highlight_label: 'مهم',
+            rows: [
+              {
+                header: 'الخيار الأول',
+                title: 'خيار 1',
+                description: 'وصف الخيار الأول',
+                id: 'opt1'
+              },
+              {
+                header: 'الخيار الثاني',
+                title: 'خيار 2',
+                description: 'وصف الخيار الثاني',
+                id: 'opt2'
+              }
+            ]
+          }
+        ]
+      }
+    },
+    // 2. زر الرد السريع (quick reply)
+    {
+      name: 'quick_reply',
+      buttonParamsJson: {
+        display_text: 'رد سريع',
+        id: 'quick1'
+      }
+    },
+
+    // 3. زر الرابط (URL)
+    {
+      name: 'cta_url',
+      buttonParamsJson: {
+        display_text: 'زيارة الموقع',
+        url: 'https://www.google.com',
+        merchant_url: 'https://www.google.com'
+      }
+    },
+
+    // 4. زر الاتصال
+    {
+      name: 'cta_call',
+      buttonParamsJson: {
+        display_text: 'اتصل بنا',
+        id: '628999'
+      }
+    },
+
+    // 5. زر النسخ
+    {
+      name: 'cta_copy',
+      buttonParamsJson: {
+        display_text: 'نسخ الكود',
+        id: 'code123',
+        copy_code: 'SPECIALCODE123'
+      }
+    },
+
+    // 6. زر التذكير
+    {
+      name: 'cta_reminder',
+      buttonParamsJson: {
+        display_text: 'تذكير',
+        id: 'reminder1'
+      }
+    },
+
+    // 7. زر إلغاء التذكير
+    {
+      name: 'cta_cancel_reminder',
+      buttonParamsJson: {
+        display_text: 'إلغاء التذكير',
+        id: 'reminder1'
+      }
+    },
+
+    // 8. زر رسالة العنوان
+    {
+      name: 'address_message',
+      buttonParamsJson: {
+        display_text: 'إرسال العنوان',
+        id: 'address1'
+      }
+    },
+
+    // 9. زر إرسال الموقع
+    {
+      name: 'send_location',
+      buttonParamsJson: ''
+    }
+  ];
+
+
+  const message = {
+    image: 'https://i.pinimg.com/originals/33/3c/a2/333ca2c8e19b327d739b2a32e0fb5994.jpg', // or >> video: https://v1.pinimg.com/videos/mc/720p/c6/e1/10/c6e110aaeaf4cc5d183d1bcd953ef17d.mp4
+    text: '👋 مرحباً! هذه رسالة تجريبية تحتوي على جميع أنواع الأزرار المدعومة.',
+    title: '📱 عرض الأزرار',
+    footer: '💡 اختر أحد الخيارات أعلاه',
+    buttons: buttons
+  };
+
+  await conn.sendDKButton(m.chat, message, m)
+
+};
+
+handler.help = ['buttons']
+handler.tags = ['test']
+handler.command = /^(buttons|أزرار)$/i
+
+export default handler
 
 ```
 
