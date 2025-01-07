@@ -101,7 +101,7 @@ sendDKButton: {
                     })
                 }
             }
-        }, { ephemeralExpiration: 604800, userJid: conn.user.jid, quoted });
+        }, { userJid: conn.user.jid, quoted });
 
         return conn.relayMessage(jid, msg.message, { messageId: msg.key.id });
     }
