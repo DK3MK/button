@@ -3,7 +3,7 @@
 Hello everyone!!!, I will share all the documentation from my baileys on npm [@seaavey/baileys](https://www.npmjs.com/package/@seaavey/baileys), we have changed this baileys in terms of code and system, please use this baileys properly
 ## Package
 ```
-"@seaavey/baileys": "6.6.5"
+"@whiskeysockets/baileys": "npm:@seaavey/baileys@6.6.5"
 ```
 
 ## Function sendDKButton, هذا تحطة في ملف simple.js
